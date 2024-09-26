@@ -94,6 +94,10 @@ def relu(z):
     return np.maximum(0, z)
 
 
+def relu_derivative(z):
+    return (z>0).astype(float)
+
+
 def gradCE(X, Y, weights):
     Ws, bs = unpack(weights)
     grads_Ws = [None] * len(Ws)  # Initialize gradients for weights
