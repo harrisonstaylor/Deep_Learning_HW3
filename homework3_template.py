@@ -4,28 +4,30 @@ import scipy.optimize
 
 NUM_HIDDEN_LAYERS = 3
 NUM_INPUT = 784
-NUM_HIDDEN = NUM_HIDDEN_LAYERS * [ 64 ]
+NUM_HIDDEN = NUM_HIDDEN_LAYERS * [64]
 NUM_OUTPUT = 10
+REG_CONST = 0.5
 
-def unpack (weights):
+
+def unpack(weights):
     # Unpack arguments
     Ws = []
 
     # Weight matrices
     start = 0
-    end = NUM_INPUT*NUM_HIDDEN[0]
+    end = NUM_INPUT * NUM_HIDDEN[0]
     W = weights[start:end]
     Ws.append(W)
 
     # Unpack the weight matrices as vectors
     for i in range(NUM_HIDDEN_LAYERS - 1):
         start = end
-        end = end + NUM_HIDDEN[i]*NUM_HIDDEN[i+1]
+        end = end + NUM_HIDDEN[i] * NUM_HIDDEN[i + 1]
         W = weights[start:end]
         Ws.append(W)
 
     start = end
-    end = end + NUM_HIDDEN[-1]*NUM_OUTPUT
+    end = end + NUM_HIDDEN[-1] * NUM_OUTPUT
     W = weights[start:end]
     Ws.append(W)
 
@@ -33,7 +35,7 @@ def unpack (weights):
     Ws[0] = Ws[0].reshape(NUM_HIDDEN[0], NUM_INPUT)
     for i in range(1, NUM_HIDDEN_LAYERS):
         # Convert from vectors into matrices
-        Ws[i] = Ws[i].reshape(NUM_HIDDEN[i], NUM_HIDDEN[i-1])
+        Ws[i] = Ws[i].reshape(NUM_HIDDEN[i], NUM_HIDDEN[i - 1])
     Ws[-1] = Ws[-1].reshape(NUM_OUTPUT, NUM_HIDDEN[-1])
 
     # Bias terms
@@ -45,7 +47,7 @@ def unpack (weights):
 
     for i in range(NUM_HIDDEN_LAYERS - 1):
         start = end
-        end = end + NUM_HIDDEN[i+1]
+        end = end + NUM_HIDDEN[i + 1]
         b = weights[start:end]
         bs.append(b)
 
@@ -56,30 +58,66 @@ def unpack (weights):
 
     return Ws, bs
 
-def fCE (X, Y, weights):
+def relu_grad(z):
+    return (z > 0).astype(float)
+
+def fCE(X, Y, weights):
     Ws, bs = unpack(weights)
-    # ...
-    return ce
-   
-def gradCE (X, Y, weights):
+
+    h = X
+    for i in range(NUM_HIDDEN_LAYERS - 1):
+        z = np.dot(h, Ws[i]) + bs[i]
+        h = relu(z)
+    # softmax
+    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])
+    ce_loss = ((-np.sum(Y * np.log(predicted_label + 1e-10)) / Y.shape[0]) +
+               ((REG_CONST / 2) * np.sum(np.dot(Ws[-1].T, Ws[-1]))))
+    return ce_loss
+
+
+def calc_z_and_softmax(features, w, b):
+    #compute z
+    z = np.dot(features, w) + b
+    #softmax
+    exp_x = np.exp(z - np.max(z, axis=1, keepdims=True))
+    predicted_label = exp_x / np.sum(exp_x, axis=1, keepdims=True)
+    return predicted_label
+
+
+def relu(z):
+    return np.maximum(0, z)
+
+
+def gradCE(X, Y, weights):
     Ws, bs = unpack(weights)
-    # ...
+
+
+
+    predicted_label = calc_z_and_softmax(X, Ws[-1], bs[-1])
+    dL_db = (predicted_label - Y) / n
+    dL_dw = np.dot(X.T, (predicted_label - Y)) / n
+    dL_dw_reg = (REG_CONST * Ws[-1])
+
     return allGradientsAsVector
 
+
 # Creates an image representing the first layer of weights (W0).
-def show_W0 (W):
-    Ws,bs = unpack(W)
+def show_W0(W):
+    Ws, bs = unpack(W)
     W = Ws[0]
     n = int(NUM_HIDDEN[0] ** 0.5)
     plt.imshow(np.vstack([
-        np.hstack([ np.pad(np.reshape(W[idx1*n + idx2,:], [ 28, 28 ]), 2, mode='constant') for idx2 in range(n) ]) for idx1 in range(n)
+        np.hstack([np.pad(np.reshape(W[idx1 * n + idx2, :], [28, 28]), 2, mode='constant') for idx2 in range(n)]) for
+        idx1 in range(n)
     ]), cmap='gray'), plt.show()
- 
-def train (trainX, trainY, weights, testX, testY, lr = 5e-2):
+
+
+def train(trainX, trainY, weights, testX, testY, lr=5e-2):
     # TODO: implement me
     pass
 
-def initWeightsAndBiases ():
+
+def initWeightsAndBiases():
     Ws = []
     bs = []
 
@@ -88,22 +126,24 @@ def initWeightsAndBiases ():
     # Initialize biases to small positive number (0.01).
 
     np.random.seed(0)
-    W = 2*(np.random.random(size=(NUM_HIDDEN[0], NUM_INPUT))/NUM_INPUT**0.5) - 1./NUM_INPUT**0.5
+    W = 2 * (np.random.random(size=(NUM_HIDDEN[0], NUM_INPUT)) / NUM_INPUT ** 0.5) - 1. / NUM_INPUT ** 0.5
     Ws.append(W)
     b = 0.01 * np.ones(NUM_HIDDEN[0])
     bs.append(b)
 
     for i in range(NUM_HIDDEN_LAYERS - 1):
-        W = 2*(np.random.random(size=(NUM_HIDDEN[i+1], NUM_HIDDEN[i]))/NUM_HIDDEN[i]**0.5) - 1./NUM_HIDDEN[i]**0.5
+        W = 2 * (np.random.random(size=(NUM_HIDDEN[i + 1], NUM_HIDDEN[i])) / NUM_HIDDEN[i] ** 0.5) - 1. / NUM_HIDDEN[
+            i] ** 0.5
         Ws.append(W)
-        b = 0.01 * np.ones(NUM_HIDDEN[i+1])
+        b = 0.01 * np.ones(NUM_HIDDEN[i + 1])
         bs.append(b)
 
-    W = 2*(np.random.random(size=(NUM_OUTPUT, NUM_HIDDEN[-1]))/NUM_HIDDEN[-1]**0.5) - 1./NUM_HIDDEN[-1]**0.5
+    W = 2 * (np.random.random(size=(NUM_OUTPUT, NUM_HIDDEN[-1])) / NUM_HIDDEN[-1] ** 0.5) - 1. / NUM_HIDDEN[-1] ** 0.5
     Ws.append(W)
     b = 0.01 * np.ones(NUM_OUTPUT)
     bs.append(b)
     return Ws, bs
+
 
 if __name__ == "__main__":
     # Load training data.
@@ -113,15 +153,16 @@ if __name__ == "__main__":
     Ws, bs = initWeightsAndBiases()
 
     # "Pack" all the weight matrices and bias vectors into long one parameter "vector".
-    weights = np.hstack([ W.flatten() for W in Ws ] + [ b.flatten() for b in bs ])
+    weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
     # On just the first 5 training examlpes, do numeric gradient check.
     # Use just the first return value ([0]) of fCE, which is the cross-entropy.
     # The lambda expression is used so that, from the perspective of
     # check_grad and approx_fprime, the only parameter to fCE is the weights
     # themselves (not the training data).
-    print(scipy.optimize.check_grad(lambda weights_: fCE(np.atleast_2d(trainX[:,0:5]), np.atleast_2d(trainY[:,0:5]), weights_), \
-                                    lambda weights_: gradCE(np.atleast_2d(trainX[:,0:5]), np.atleast_2d(trainY[:,0:5]), weights_), \
-                                    weights))
+    print(scipy.optimize.check_grad(
+        lambda weights_: fCE(np.atleast_2d(trainX[:, 0:5]), np.atleast_2d(trainY[:, 0:5]), weights_), \
+        lambda weights_: gradCE(np.atleast_2d(trainX[:, 0:5]), np.atleast_2d(trainY[:, 0:5]), weights_), \
+        weights))
     #print(scipy.optimize.approx_fprime(weights, lambda weights_: fCE(np.atleast_2d(trainX[:,0:5]), np.atleast_2d(trainY[:,0:5]), weights_), 1e-6))
 
     weights = train(trainX, trainY, weights, testX, testY, 0.01)
