@@ -68,7 +68,7 @@ def fCE(X, Y, weights):
 
     h = X
     for i in range(NUM_HIDDEN_LAYERS - 1):
-        z = np.dot(h, Ws[i]) + bs[i]
+        z = np.dot(h, Ws[i].T) + bs[i]
         h = relu(z)
     # softmax
     predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])
@@ -83,7 +83,7 @@ def fCE(X, Y, weights):
 
 def calc_z_and_softmax(features, w, b):
     # compute z
-    z = np.dot(features, w) + b
+    z = np.dot(features, w.T) + b
     # softmax
     exp_x = np.exp(z - np.max(z, axis=1, keepdims=True))
     predicted_label = exp_x / np.sum(exp_x, axis=1, keepdims=True)
@@ -95,7 +95,7 @@ def relu(z):
 
 
 def relu_derivative(z):
-    return (z>0).astype(float)
+    return (z > 0).astype(float)
 
 
 def gradCE(X, Y, weights):
@@ -107,7 +107,8 @@ def gradCE(X, Y, weights):
     h = X
     activations = [h]  # Store activations for backprop
     for i in range(NUM_HIDDEN_LAYERS - 1):
-        z = np.dot(h, Ws[i]) + bs[i]
+        print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
+        z = np.dot(h, Ws[i].T) + bs[i]
         h = relu(z)
         activations.append(h)
 
@@ -117,8 +118,8 @@ def gradCE(X, Y, weights):
     # Backward pass (backpropagation)
     # Compute gradient at output layer (softmax layer)
     delta = predicted_label - Y  # Gradient of cross-entropy loss with respect to softmax output
-    grads_Ws[-1] = np.dot(activations[-1].T, delta) / X.shape[0] + REG_CONST * Ws[
-        -1]  # Gradient of weights with regularization
+    grads_Ws[-1] = np.dot(activations[-2].T, delta) / X.shape[0] + REG_CONST * Ws[-1]
+
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
 
     # Backpropagate through hidden layers
@@ -133,6 +134,11 @@ def gradCE(X, Y, weights):
     return gradients
 
 
+def pack(grads_Ws, grads_bs):
+    # Flatten and concatenate all gradient matrices and bias vectors into a single 1D array
+    return np.hstack([W.flatten() for W in grads_Ws] + [b.flatten() for b in grads_bs])
+
+
 # Creates an image representing the first layer of weights (W0).
 def show_W0(W):
     Ws, bs = unpack(W)
@@ -142,36 +148,6 @@ def show_W0(W):
         np.hstack([np.pad(np.reshape(W[idx1 * n + idx2, :], [28, 28]), 2, mode='constant') for idx2 in range(n)]) for
         idx1 in range(n)
     ]), cmap='gray'), plt.show()
-
-
-def train(trainX, trainY, weights, testX, testY, lr=5e-2, num_epochs=100):
-    # Initialize variables to store loss history
-    train_loss_history = []
-    test_loss_history = []
-
-    # Main training loop
-    for epoch in range(num_epochs):
-        # 1. Compute the cost (cross-entropy loss + regularization) for the current weights
-        train_loss = fCE(trainX, trainY, weights)
-        test_loss = fCE(testX, testY, weights)
-
-        # 2. Store the loss values for visualization and monitoring
-        train_loss_history.append(train_loss)
-        test_loss_history.append(test_loss)
-
-        # 3. Compute the gradients using backpropagation with regularization
-        gradients = gradCE(trainX, trainY, weights)
-
-        # 4. Update the weights using gradient descent
-        weights = [w - lr * dw for w, dw in zip(weights, gradients)]
-
-        # 5. Print the progress (optional)
-        if epoch % 10 == 0 or epoch == num_epochs - 1:
-            print(f"Epoch {epoch}/{num_epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
-
-    # Return the final weights and the loss history for both training and test sets
-    return weights, train_loss_history, test_loss_history
-
 
 
 def initWeightsAndBiases():
@@ -202,25 +178,74 @@ def initWeightsAndBiases():
     return Ws, bs
 
 
+def train(trainX, trainY, weights, testX, testY, lr=5e-2, num_epochs=100, batch_size=32):
+    # Initialize variables to store loss history
+    train_loss_history = []
+    test_loss_history = []
+    n_samples = trainX.shape[0]
+
+    # Main training loop
+    for epoch in range(num_epochs):
+        # Shuffle data for stochastic gradient descent
+        indices = np.random.permutation(n_samples)
+        trainX_shuffled = trainX[indices]
+        trainY_shuffled = trainY[indices]
+
+        for i in range(0, n_samples, batch_size):
+            # Create mini-batches
+            X_batch = trainX_shuffled[i:i + batch_size]
+            Y_batch = trainY_shuffled[i:i + batch_size]
+
+            # 1. Compute the gradients using backpropagation with regularization on the mini-batch
+            gradients = gradCE(X_batch, Y_batch, weights)
+
+            # 2. Update the weights using gradient descent on the mini-batch
+            weights = weights - lr * gradients
+
+        # 3. Compute the cost (cross-entropy loss + regularization) for the current weights
+        train_loss = fCE(trainX, trainY, weights)
+        test_loss = fCE(testX, testY, weights)
+
+        # 4. Store the loss values for visualization and monitoring
+        train_loss_history.append(train_loss)
+        test_loss_history.append(test_loss)
+
+        # 5. Print the progress (optional)
+        if epoch % 10 == 0 or epoch == num_epochs - 1:
+            print(f"Epoch {epoch}/{num_epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+
+    # Return the final weights and the loss history for both training and test sets
+    return weights, train_loss_history, test_loss_history
+
+def one_hot_encode(labels, num_classes):
+    return np.eye(num_classes)[labels]
+
 if __name__ == "__main__":
     # Load training data.
-    # Recommendation: divide the pixels by 255 (so that their range is [0-1]), and then subtract
-    # 0.5 (so that the range is [-0.5,+0.5]).
-
     Ws, bs = initWeightsAndBiases()
+    trainX = np.load("fashion_mnist_train_images.npy")
+    trainY = np.load("fashion_mnist_train_labels.npy")
+    testX = np.load("fashion_mnist_test_images.npy")
+    testY = np.load("fashion_mnist_test_labels.npy")
 
-    # "Pack" all the weight matrices and bias vectors into long one parameter "vector".
+    trainY = one_hot_encode(trainY, NUM_OUTPUT)
+    testY = one_hot_encode(testY, NUM_OUTPUT)
+
+    print(f"trainY shape: {trainY.shape}")  # Should print (60000, 10)
+    print(f"testY shape: {testY.shape}")
+    print(trainY.shape)
+    # Pack all the weight matrices and bias vectors into long one parameter "vector".
     weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
-    # On just the first 5 training examlpes, do numeric gradient check.
-    # Use just the first return value ([0]) of fCE, which is the cross-entropy.
-    # The lambda expression is used so that, from the perspective of
-    # check_grad and approx_fprime, the only parameter to fCE is the weights
-    # themselves (not the training data).
-    print(scipy.optimize.check_grad(
-        lambda weights_: fCE(np.atleast_2d(trainX[:, 0:5]), np.atleast_2d(trainY[:, 0:5]), weights_), \
-        lambda weights_: gradCE(np.atleast_2d(trainX[:, 0:5]), np.atleast_2d(trainY[:, 0:5]), weights_), \
-        weights))
-    # print(scipy.optimize.approx_fprime(weights, lambda weights_: fCE(np.atleast_2d(trainX[:,0:5]), np.atleast_2d(trainY[:,0:5]), weights_), 1e-6))
 
-    weights = train(trainX, trainY, weights, testX, testY, 0.01)
-    show_W0(weights)
+    # On just the first 5 training examples, do numeric gradient check.
+    print(scipy.optimize.check_grad(
+        lambda weights_: fCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
+        lambda weights_: gradCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
+        weights))
+
+    # Train with stochastic gradient descent
+    final_weights, train_loss_history, test_loss_history = train(trainX, trainY, weights, testX, testY, lr=0.01,
+                                                                 batch_size=32)
+
+    # Visualize the first layer of weights
+    show_W0(final_weights)
