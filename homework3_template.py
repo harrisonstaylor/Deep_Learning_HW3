@@ -118,7 +118,7 @@ def gradCE(X, Y, weights):
     # Backward pass (backpropagation)
     # Compute gradient at output layer (softmax layer)
     delta = predicted_label - Y  # Gradient of cross-entropy loss with respect to softmax output
-    grads_Ws[-1] = np.dot(activations[-2].T, delta) / X.shape[0] + REG_CONST * Ws[-1]
+    grads_Ws[-1] = (np.dot(activations[-1].T, delta) / X.shape[0]) + (REG_CONST * Ws[-1]).T
 
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
 
