@@ -223,9 +223,9 @@ def one_hot_encode(labels, num_classes):
 if __name__ == "__main__":
     # Load training data.
     Ws, bs = initWeightsAndBiases()
-    trainX = np.load("fashion_mnist_train_images.npy")
+    trainX = np.load("fashion_mnist_train_images.npy")/255
     trainY = np.load("fashion_mnist_train_labels.npy")
-    testX = np.load("fashion_mnist_test_images.npy")
+    testX = np.load("fashion_mnist_test_images.npy")/255
     testY = np.load("fashion_mnist_test_labels.npy")
 
     trainY = one_hot_encode(trainY, NUM_OUTPUT)
