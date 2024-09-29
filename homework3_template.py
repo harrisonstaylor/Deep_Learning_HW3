@@ -118,20 +118,19 @@ def gradCE(X, Y, weights):
     # Backward pass (backpropagation)
     # Compute gradient at output layer (softmax layer)
     delta = predicted_label - Y  # Gradient of cross-entropy loss with respect to softmax output
-    grads_Ws[-1] = (np.dot(activations[-1].T, delta) / X.shape[0]) + (REG_CONST * Ws[-1]).T
-
+    grads_Ws[-1] = (np.dot(delta.T, activations[-1]) / X.shape[0]) + (REG_CONST * Ws[-1])
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
-
     # Backpropagate through hidden layers
-    for i in range(NUM_HIDDEN_LAYERS - 2, -1, -1):
-        delta = np.dot(delta, Ws[i + 1].T) * relu_derivative(activations[i + 1])  # Backprop delta
-        grads_Ws[i] = np.dot(activations[i].T, delta) / X.shape[0] + REG_CONST * Ws[
-            i]
-        grads_bs[i] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases
+    for i in range(NUM_HIDDEN_LAYERS - 1, 0, -1):  # Start from the last hidden layer
+        delta = np.dot(delta, Ws[i]) * relu_derivative(activations[i])  # Backprop delta through hidden layers
+        grads_Ws[i - 1] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
+        grads_bs[i - 1] = np.sum(delta, axis=0) / X.shape[0]
 
     # Pack gradients and return
     gradients = pack(grads_Ws, grads_bs)
     return gradients
+
+
 
 
 def pack(grads_Ws, grads_bs):
@@ -231,9 +230,6 @@ if __name__ == "__main__":
     trainY = one_hot_encode(trainY, NUM_OUTPUT)
     testY = one_hot_encode(testY, NUM_OUTPUT)
 
-    print(f"trainY shape: {trainY.shape}")  # Should print (60000, 10)
-    print(f"testY shape: {testY.shape}")
-    print(trainY.shape)
     # Pack all the weight matrices and bias vectors into long one parameter "vector".
     weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
 
