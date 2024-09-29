@@ -136,7 +136,7 @@ def gradCE(X, Y, weights):
 
 def pack(grads_Ws, grads_bs):
     # Flatten and concatenate all gradient matrices and bias vectors into a single 1D array
-    return np.hstack([W.flatten() for W in grads_Ws] + [b.flatten() for b in grads_bs])
+    return np.hstack([np.matrix(W).flatten() for W in grads_Ws] + [np.matrix(b).flatten() for b in grads_bs])
 
 
 # Creates an image representing the first layer of weights (W0).
