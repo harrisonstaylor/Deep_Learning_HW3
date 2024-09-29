@@ -107,7 +107,7 @@ def gradCE(X, Y, weights):
     h = X
     activations = [h]  # Store activations for backprop
     for i in range(NUM_HIDDEN_LAYERS - 1):
-        print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
+        #print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
         z = np.dot(h, Ws[i].T) + bs[i]
         h = relu(z)
         activations.append(h)
@@ -122,7 +122,8 @@ def gradCE(X, Y, weights):
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
     # Backpropagate through hidden layers
     for i in range(NUM_HIDDEN_LAYERS - 1, 0, -1):  # Start from the last hidden layer
-        delta = np.dot(delta, Ws[i]) * relu_derivative(activations[i])  # Backprop delta through hidden layers
+        print(f"delta shape: {delta.shape}, Ws shape: {Ws[i+1].shape}")
+        delta = np.dot(delta, Ws[i+1]) * relu_derivative(activations[i])  # Backprop delta through hidden layers
         grads_Ws[i - 1] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
         grads_bs[i - 1] = np.sum(delta, axis=0) / X.shape[0]
 
