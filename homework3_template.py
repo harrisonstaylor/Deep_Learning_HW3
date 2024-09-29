@@ -123,7 +123,8 @@ def gradCE(X, Y, weights):
     # Backpropagate through hidden layers
     for i in range(NUM_HIDDEN_LAYERS - 1, 0, -1):  # Start from the last hidden layer
         print(f"delta shape: {delta.shape}, Ws shape: {Ws[i+1].shape}")
-        delta = np.dot(delta, Ws[i+1]) * relu_derivative(activations[i])  # Backprop delta through hidden layers
+        print(i)
+        delta = np.dot(delta, Ws[i+1]) * relu_derivative(activations[i])
         grads_Ws[i - 1] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
         grads_bs[i - 1] = np.sum(delta, axis=0) / X.shape[0]
 
@@ -233,7 +234,6 @@ if __name__ == "__main__":
 
     # Pack all the weight matrices and bias vectors into long one parameter "vector".
     weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
-
     # On just the first 5 training examples, do numeric gradient check.
     print(scipy.optimize.check_grad(
         lambda weights_: fCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
