@@ -6,7 +6,7 @@ NUM_HIDDEN_LAYERS = 1
 NUM_INPUT = 784
 NUM_HIDDEN = NUM_HIDDEN_LAYERS * [64]
 NUM_OUTPUT = 10
-REG_CONST = 0.5
+REG_CONST = 0.00001
 
 
 def unpack(weights):
@@ -116,7 +116,7 @@ def gradCE(X, Y, weights):
 
     # Compute softmax and loss (not used in backprop, but useful to keep track)
     predicted_label, z = calc_z_and_softmax(h, Ws[-1], bs[-1])
-    zs.append(z)
+    #zs.append(z)
 
     # Backward pass (backpropagation)
     # Compute gradient at output layer (softmax layer)
@@ -125,7 +125,6 @@ def gradCE(X, Y, weights):
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]
     # Backpropagate through hidden layers
     for i in range(NUM_HIDDEN_LAYERS - 1, -1, -1):  # Start from the last hidden layer
-        print(f"delta shape: {delta.shape}, Ws shape: {Ws[i + 1].shape}")
         delta = np.dot(delta, Ws[i + 1]) * relu_derivative(zs[i])
         grads_Ws[i] = (np.dot(delta.T, activations[i]) / X.shape[0]) + (REG_CONST * Ws[i])
         grads_bs[i] = np.sum(delta, axis=0) / X.shape[0]
@@ -225,9 +224,9 @@ def one_hot_encode(labels, num_classes):
 if __name__ == "__main__":
     # Load training data.
     Ws, bs = initWeightsAndBiases()
-    trainX = np.load("fashion_mnist_train_images.npy") / 255
+    trainX = (np.load("fashion_mnist_train_images.npy") / 255) - .5
     trainY = np.load("fashion_mnist_train_labels.npy")
-    testX = np.load("fashion_mnist_test_images.npy") / 255
+    testX = (np.load("fashion_mnist_test_images.npy") / 255) - .5
     testY = np.load("fashion_mnist_test_labels.npy")
 
     trainY = one_hot_encode(trainY, NUM_OUTPUT)
@@ -236,14 +235,29 @@ if __name__ == "__main__":
     # Pack all the weight matrices and bias vectors into long one parameter "vector".
     weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
     # On just the first 5 training examples, do numeric gradient check.
-    print(scipy.optimize.check_grad(
-        lambda weights_: fCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
-        lambda weights_: gradCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
-        weights))
+    # print(scipy.optimize.check_grad(
+    #     lambda weights_: fCE(np.atleast_2d(trainX[:10]), np.atleast_2d(trainY[:10]), weights_),
+    #     lambda weights_: gradCE(np.atleast_2d(trainX[:10]), np.atleast_2d(trainY[:10]), weights_),
+    #     weights))
 
     # Train with stochastic gradient descent
-    final_weights, train_loss_history, test_loss_history = train(trainX, trainY, weights, testX, testY, lr=0.01,
-                                                                 batch_size=32)
+    final_weights, train_loss_history, test_loss_history = train(trainX, trainY, weights, testX, testY, lr=5e-2,
+                                                                 batch_size=128)
+    Ws, bs = unpack(final_weights)
+
+    h = testX
+    for i in range(NUM_HIDDEN_LAYERS):
+        z = np.dot(h, Ws[i].T) + bs[i]
+        h = relu(z)
+    # softmax
+    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])[0]
+    maxTest=np.argmax(testY, axis=1)
+    maxPred=np.argmax(predicted_label, axis=1)
+    numcorrect=0
+    for i in range(maxTest.shape[0]):
+        if maxTest[i] == maxPred[i]:
+            numcorrect+=1
+    print(numcorrect/maxTest.shape[0] * 100)
 
     # Visualize the first layer of weights
     show_W0(final_weights)
