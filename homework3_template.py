@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize
 
-NUM_HIDDEN_LAYERS = 3
+NUM_HIDDEN_LAYERS = 1
 NUM_INPUT = 784
 NUM_HIDDEN = NUM_HIDDEN_LAYERS * [64]
 NUM_OUTPUT = 10
@@ -67,7 +67,7 @@ def fCE(X, Y, weights):
     Ws, bs = unpack(weights)
 
     h = X
-    for i in range(NUM_HIDDEN_LAYERS - 1):
+    for i in range(NUM_HIDDEN_LAYERS):
         z = np.dot(h, Ws[i].T) + bs[i]
         h = relu(z)
     # softmax
@@ -106,9 +106,11 @@ def gradCE(X, Y, weights):
     # Forward pass to compute activations
     h = X
     activations = [h]  # Store activations for backprop
-    for i in range(NUM_HIDDEN_LAYERS - 1):
+    zs = []
+    for i in range(NUM_HIDDEN_LAYERS):
         #print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
         z = np.dot(h, Ws[i].T) + bs[i]
+        zs.append(z)
         h = relu(z)
         activations.append(h)
 
@@ -119,11 +121,11 @@ def gradCE(X, Y, weights):
     # Compute gradient at output layer (softmax layer)
     delta = predicted_label - Y  # Gradient of cross-entropy loss with respect to softmax output
     grads_Ws[-1] = (np.dot(delta.T, activations[-1]) / X.shape[0]) + (REG_CONST * Ws[-1])
-    grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
+    grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]
     # Backpropagate through hidden layers
     for i in range(NUM_HIDDEN_LAYERS - 1, -1, -1):  # Start from the last hidden layer
         print(f"delta shape: {delta.shape}, Ws shape: {Ws[i+1].shape}")
-        delta = np.dot(delta, Ws[i+1]) * relu_derivative(activations[i])
+        delta = np.dot(delta, Ws[i+1]) * relu_derivative(zs[i])
         grads_Ws[i] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
         grads_bs[i] = np.sum(delta, axis=0) / X.shape[0]
 
