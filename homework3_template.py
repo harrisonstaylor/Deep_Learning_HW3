@@ -71,7 +71,7 @@ def fCE(X, Y, weights):
         z = np.dot(h, Ws[i].T) + bs[i]
         h = relu(z)
     # softmax
-    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])
+    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])[0]
     ce_loss = ((-np.sum(Y * np.log(predicted_label + 1e-10)) / Y.shape[0]) +
                ((REG_CONST / 2) * np.sum(np.dot(Ws[-1].T, Ws[-1]))))
 
@@ -87,7 +87,7 @@ def calc_z_and_softmax(features, w, b):
     # softmax
     exp_x = np.exp(z - np.max(z, axis=1, keepdims=True))
     predicted_label = exp_x / np.sum(exp_x, axis=1, keepdims=True)
-    return predicted_label
+    return predicted_label, z
 
 
 def relu(z):
@@ -115,7 +115,8 @@ def gradCE(X, Y, weights):
         activations.append(h)
 
     # Compute softmax and loss (not used in backprop, but useful to keep track)
-    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])
+    predicted_label, z = calc_z_and_softmax(h, Ws[-1], bs[-1])
+    zs.append(z)
 
     # Backward pass (backpropagation)
     # Compute gradient at output layer (softmax layer)
