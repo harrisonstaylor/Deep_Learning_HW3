@@ -121,12 +121,11 @@ def gradCE(X, Y, weights):
     grads_Ws[-1] = (np.dot(delta.T, activations[-1]) / X.shape[0]) + (REG_CONST * Ws[-1])
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]  # Gradient of biases (no regularization)
     # Backpropagate through hidden layers
-    for i in range(NUM_HIDDEN_LAYERS - 1, 0, -1):  # Start from the last hidden layer
+    for i in range(NUM_HIDDEN_LAYERS - 1, -1, -1):  # Start from the last hidden layer
         print(f"delta shape: {delta.shape}, Ws shape: {Ws[i+1].shape}")
-        print(i)
         delta = np.dot(delta, Ws[i+1]) * relu_derivative(activations[i])
-        grads_Ws[i - 1] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
-        grads_bs[i - 1] = np.sum(delta, axis=0) / X.shape[0]
+        grads_Ws[i] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
+        grads_bs[i] = np.sum(delta, axis=0) / X.shape[0]
 
     # Pack gradients and return
     gradients = pack(grads_Ws, grads_bs)
