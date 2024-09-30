@@ -108,7 +108,7 @@ def gradCE(X, Y, weights):
     activations = [h]  # Store activations for backprop
     zs = []
     for i in range(NUM_HIDDEN_LAYERS):
-        #print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
+        # print(f"Shape of h: {h.shape}, Shape of Ws[{i}]: {Ws[i].shape}")
         z = np.dot(h, Ws[i].T) + bs[i]
         zs.append(z)
         h = relu(z)
@@ -125,9 +125,9 @@ def gradCE(X, Y, weights):
     grads_bs[-1] = np.sum(delta, axis=0) / X.shape[0]
     # Backpropagate through hidden layers
     for i in range(NUM_HIDDEN_LAYERS - 1, -1, -1):  # Start from the last hidden layer
-        print(f"delta shape: {delta.shape}, Ws shape: {Ws[i+1].shape}")
-        delta = np.dot(delta, Ws[i+1]) * relu_derivative(zs[i])
-        grads_Ws[i] = (np.dot(delta.T, activations[i - 1]) / X.shape[0]) + (REG_CONST * Ws[i - 1])
+        print(f"delta shape: {delta.shape}, Ws shape: {Ws[i + 1].shape}")
+        delta = np.dot(delta, Ws[i + 1]) * relu_derivative(zs[i])
+        grads_Ws[i] = (np.dot(delta.T, activations[i]) / X.shape[0]) + (REG_CONST * Ws[i])
         grads_bs[i] = np.sum(delta, axis=0) / X.shape[0]
 
     # Pack gradients and return
@@ -135,11 +135,8 @@ def gradCE(X, Y, weights):
     return gradients
 
 
-
-
 def pack(grads_Ws, grads_bs):
-    # Flatten and concatenate all gradient matrices and bias vectors into a single 1D array
-    return np.hstack([np.matrix(W).flatten() for W in grads_Ws] + [np.matrix(b).flatten() for b in grads_bs])
+    return np.hstack([W.flatten() for W in grads_Ws] + [b.flatten() for b in grads_bs])
 
 
 # Creates an image representing the first layer of weights (W0).
@@ -220,15 +217,17 @@ def train(trainX, trainY, weights, testX, testY, lr=5e-2, num_epochs=100, batch_
     # Return the final weights and the loss history for both training and test sets
     return weights, train_loss_history, test_loss_history
 
+
 def one_hot_encode(labels, num_classes):
     return np.eye(num_classes)[labels]
+
 
 if __name__ == "__main__":
     # Load training data.
     Ws, bs = initWeightsAndBiases()
-    trainX = np.load("fashion_mnist_train_images.npy")/255
+    trainX = np.load("fashion_mnist_train_images.npy") / 255
     trainY = np.load("fashion_mnist_train_labels.npy")
-    testX = np.load("fashion_mnist_test_images.npy")/255
+    testX = np.load("fashion_mnist_test_images.npy") / 255
     testY = np.load("fashion_mnist_test_labels.npy")
 
     trainY = one_hot_encode(trainY, NUM_OUTPUT)
