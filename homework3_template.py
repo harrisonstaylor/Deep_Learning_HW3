@@ -6,7 +6,7 @@ NUM_HIDDEN_LAYERS = 1
 NUM_INPUT = 784
 NUM_HIDDEN = NUM_HIDDEN_LAYERS * [64]
 NUM_OUTPUT = 10
-REG_CONST = 0.00001
+REG_CONST = 0.000001
 
 
 def unpack(weights):
@@ -148,6 +148,15 @@ def show_W0(W):
         idx1 in range(n)
     ]), cmap='gray'), plt.show()
 
+def show_W1(W):
+    Ws, bs = unpack(W)
+    W = Ws[1]
+    n = int(NUM_HIDDEN[0] ** 0.5)
+    plt.imshow(np.vstack([
+        np.hstack([np.pad(np.reshape(W[idx1 * n + idx2, :], [28, 28]), 2, mode='constant') for idx2 in range(n)]) for
+        idx1 in range(n)
+    ]), cmap='gray'), plt.show()
+
 
 def initWeightsAndBiases():
     Ws = []
@@ -235,10 +244,10 @@ if __name__ == "__main__":
     # Pack all the weight matrices and bias vectors into long one parameter "vector".
     weights = np.hstack([W.flatten() for W in Ws] + [b.flatten() for b in bs])
     # On just the first 5 training examples, do numeric gradient check.
-    # print(scipy.optimize.check_grad(
-    #     lambda weights_: fCE(np.atleast_2d(trainX[:10]), np.atleast_2d(trainY[:10]), weights_),
-    #     lambda weights_: gradCE(np.atleast_2d(trainX[:10]), np.atleast_2d(trainY[:10]), weights_),
-    #     weights))
+    print(scipy.optimize.check_grad(
+        lambda weights_: fCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
+        lambda weights_: gradCE(np.atleast_2d(trainX[:5]), np.atleast_2d(trainY[:5]), weights_),
+        weights))
 
     # Train with stochastic gradient descent
     final_weights, train_loss_history, test_loss_history = train(trainX, trainY, weights, testX, testY, lr=5e-2,
@@ -261,3 +270,4 @@ if __name__ == "__main__":
 
     # Visualize the first layer of weights
     show_W0(final_weights)
+    show_W1(final_weights)
