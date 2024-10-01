@@ -10,6 +10,9 @@ NUM_OUTPUT = 10
 REG_CONST = 0.000001
 
 
+testX = (np.load("fashion_mnist_test_images.npy") / 255) - .5
+testY = np.load("fashion_mnist_test_labels.npy")
+
 def unpack(weights):
     # Unpack arguments
     Ws = []
@@ -148,17 +151,6 @@ def show_W0(W):
         np.hstack([np.pad(np.reshape(W[idx1 * n + idx2, :], [28, 28]), 2, mode='constant') for idx2 in range(n)]) for
         idx1 in range(n)
     ]), cmap='gray'), plt.show()
-
-def show_W1(W):
-    Ws, bs = unpack(W)
-    W = Ws[1]
-    n = int(NUM_HIDDEN[0] ** 0.5)
-    plt.imshow(np.vstack([
-        np.hstack([np.pad(np.reshape(W[idx1 * n + idx2, :], [28, 28]), 2, mode='constant') for idx2 in range(n)]) for
-        idx1 in range(n)
-    ]), cmap='gray'), plt.show()
-
-
 def initWeightsAndBiases():
     Ws = []
     bs = []
@@ -210,7 +202,10 @@ def train(trainX, trainY, weights, testX, testY, lr=5e-2, num_epochs=100, batch_
 
             # 2. Update the weights using gradient descent on the mini-batch
             weights = weights - lr * gradients
-
+            print("current batch: "+str(i)+" to "+str(i+batch_size))
+            test_acc(weights)
+            print()
+            print("current test ce loss:"+str(fCE(testX,testY,weights)))
         # 3. Compute the cost (cross-entropy loss + regularization) for the current weights
         train_loss = fCE(trainX, trainY, weights)
         test_loss = fCE(testX, testY, weights)
@@ -231,13 +226,29 @@ def one_hot_encode(labels, num_classes):
     return np.eye(num_classes)[labels]
 
 
+def test_acc(weights):
+    Ws, bs = unpack(weights)
+
+    h = testX
+    for i in range(NUM_HIDDEN_LAYERS):
+        z = np.dot(h, Ws[i].T) + bs[i]
+        h = relu(z)
+    # softmax
+    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])[0]
+    maxTest = np.argmax(testY, axis=1)
+    maxPred = np.argmax(predicted_label, axis=1)
+    numcorrect = 0
+    for i in range(maxTest.shape[0]):
+        if maxTest[i] == maxPred[i]:
+            numcorrect += 1
+    print("current test loss: " + str(numcorrect / maxTest.shape[0] * 100))
+
+
 if __name__ == "__main__":
     # Load training data.
     Ws, bs = initWeightsAndBiases()
     trainX = (np.load("fashion_mnist_train_images.npy") / 255) - .5
     trainY = np.load("fashion_mnist_train_labels.npy")
-    testX = (np.load("fashion_mnist_test_images.npy") / 255) - .5
-    testY = np.load("fashion_mnist_test_labels.npy")
 
     trainY = one_hot_encode(trainY, NUM_OUTPUT)
     testY = one_hot_encode(testY, NUM_OUTPUT)
@@ -255,20 +266,7 @@ if __name__ == "__main__":
                                                                  batch_size=128)
     Ws, bs = unpack(final_weights)
 
-    h = testX
-    for i in range(NUM_HIDDEN_LAYERS):
-        z = np.dot(h, Ws[i].T) + bs[i]
-        h = relu(z)
-    # softmax
-    predicted_label = calc_z_and_softmax(h, Ws[-1], bs[-1])[0]
-    maxTest=np.argmax(testY, axis=1)
-    maxPred=np.argmax(predicted_label, axis=1)
-    numcorrect=0
-    for i in range(maxTest.shape[0]):
-        if maxTest[i] == maxPred[i]:
-            numcorrect+=1
-    print(numcorrect/maxTest.shape[0] * 100)
+    test_acc(weights)
 
     # Visualize the first layer of weights
     show_W0(final_weights)
-    show_W1(final_weights)
